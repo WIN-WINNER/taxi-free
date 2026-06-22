@@ -148,8 +148,19 @@ app.post('/api/login', async (req, res) => {
   }
 })
 
-// 獲取用戶的所有紀錄
-app.get('/api/entries', verifyToken, (req, res) => {
+// 公共端點：獲取所有紀錄（不需要驗證）
+app.get('/api/entries', (req, res) => {
+  try {
+    const entries = getEntries()
+    res.json(entries)
+  } catch (error) {
+    console.error('Get entries error:', error)
+    res.status(500).json({ error: 'Failed to fetch entries' })
+  }
+})
+
+// 獲取用戶的所有紀錄（已驗證）
+app.get('/api/entries/user/:userId', verifyToken, (req, res) => {
   try {
     const entries = getEntries()
     const userEntries = entries.filter((e) => e.userId === req.userId)
@@ -160,8 +171,8 @@ app.get('/api/entries', verifyToken, (req, res) => {
   }
 })
 
-// 新增紀錄
-app.post('/api/entries', verifyToken, (req, res) => {
+// 新增紀錄（公共端點）
+app.post('/api/entries', (req, res) => {
   try {
     const { date, person, location, amount, notes } = req.body
 
@@ -172,7 +183,6 @@ app.post('/api/entries', verifyToken, (req, res) => {
     const entries = getEntries()
     const newEntry = {
       id: Date.now().toString(),
-      userId: req.userId,
       date,
       person,
       location,
@@ -237,6 +247,84 @@ app.put('/api/entries/:id', verifyToken, (req, res) => {
     }
 
     const index = entries.findIndex((e) => e.id === req.params.id)
+    entries[index] = updated
+    saveEntries(entries)
+
+    res.json(updated)
+  } catch (error) {
+    console.error('Update entry error:', error)
+    res.status(500).json({ error: 'Failed to update entry' })
+  }
+})
+
+// Manus 數據 API 端點
+app.get('/api/data/entries', (req, res) => {
+  try {
+    const entries = getEntries()
+    res.json(entries)
+  } catch (error) {
+    console.error('Get entries error:', error)
+    res.status(500).json({ error: 'Failed to fetch entries' })
+  }
+})
+
+app.post('/api/data/entries', (req, res) => {
+  try {
+    const { date, person, location, amount, notes } = req.body
+
+    if (!date || !person || !location || amount === undefined || amount === null || amount === '') {
+      return res.status(400).json({ error: 'Missing required fields' })
+    }
+
+    const entries = getEntries()
+    const newEntry = {
+      id: Date.now().toString(),
+      date,
+      person,
+      location,
+      amount: amount === 0 ? 0 : parseFloat(amount),
+      notes: notes || '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+
+    entries.push(newEntry)
+    saveEntries(entries)
+
+    res.json(newEntry)
+  } catch (error) {
+    console.error('Add entry error:', error)
+    res.status(500).json({ error: 'Failed to add entry' })
+  }
+})
+
+app.delete('/api/data/entries/:id', (req, res) => {
+  try {
+    const entries = getEntries()
+    const filtered = entries.filter((e) => e.id !== req.params.id)
+    saveEntries(filtered)
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Delete entry error:', error)
+    res.status(500).json({ error: 'Failed to delete entry' })
+  }
+})
+
+app.put('/api/data/entries/:id', (req, res) => {
+  try {
+    const entries = getEntries()
+    const index = entries.findIndex((e) => e.id === req.params.id)
+    
+    if (index === -1) {
+      return res.status(404).json({ error: 'Entry not found' })
+    }
+
+    const updated = {
+      ...entries[index],
+      ...req.body,
+      updatedAt: new Date().toISOString(),
+    }
+
     entries[index] = updated
     saveEntries(entries)
 

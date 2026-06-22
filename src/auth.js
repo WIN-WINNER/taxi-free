@@ -5,7 +5,7 @@ import { register, login, getEntries, addEntry, deleteEntry } from './api.js'
 let currentToken = localStorage.getItem('taxi-free-token') || null
 let currentUserId = localStorage.getItem('taxi-free-userId') || null
 let entriesCache = []
-let peopleCache = ['阿龍', '阿大', '阿鐵']
+let peopleCache = ['阿物', '阿大', '阿鐵']
 let locationsCache = []
 
 // 訂閱者列表
@@ -105,7 +105,7 @@ export async function deleteEntryForUser(entryId) {
 
 // 更新搭乘者緩存（從紀錄中提取）
 function updatePeopleCache() {
-  const people = new Set(['阿龍', '阿大', '阿鐵'])
+  const people = new Set(['阿物', '阿大', '阿鐵'])
   entriesCache.forEach(entry => {
     if (entry.person) {
       people.add(entry.person)
@@ -129,7 +129,7 @@ function updateLocationsCache() {
 
 // 獲取存儲的搭乘者
 export function getStoredPeople() {
-  return peopleCache.length > 0 ? peopleCache : ['阿龍', '阿大', '阿鐵']
+  return peopleCache.length > 0 ? peopleCache : ['阿物', '阿大', '阿鐵']
 }
 
 // 獲取存儲的地點

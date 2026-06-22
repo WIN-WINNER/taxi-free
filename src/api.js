@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://taxi-free-api-production.up.railway.app/api'
 
 export async function register(email, password) {
   const response = await fetch(`${API_URL}/register`, {

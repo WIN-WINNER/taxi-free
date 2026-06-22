@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { addEntryForUser, getStoredPeople, getStoredLocations, subscribeToPeople, subscribeToLocations } from '../auth'
+import { addEntry, getEntries } from '../supabase'
 
 const MAX_VISIBLE_ITEMS = 7
 
@@ -22,44 +22,34 @@ export default function AddEntryPage({ onNavigate }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // 初始加載搭乘者
+  // 從 Supabase 加載搭乘者和地點
   useEffect(() => {
-    const peopleList = getStoredPeople()
-    setPeople(peopleList)
-    if (peopleList.length > 0) {
-      setSelectedPerson(peopleList[0])
-    }
-  }, [])
-
-  // 初始加載地點
-  useEffect(() => {
-    const locationList = getStoredLocations()
-    setLocations(locationList)
-  }, [])
-
-  // 訂閱搭乘者變化
-  useEffect(() => {
-    const unsubscribe = subscribeToPeople((newPeople) => {
-      setPeople(newPeople)
-      // 如果當前選擇的人不在列表中，選擇第一個
-      if (newPeople.length > 0 && !newPeople.includes(selectedPerson)) {
-        setSelectedPerson(newPeople[0])
-      }
-    })
-    return () => {
-      if (unsubscribe) unsubscribe()
-    }
+    loadData()
+    // 每 3 秒刷新一次
+    const interval = setInterval(loadData, 3000)
+    return () => clearInterval(interval)
   }, [selectedPerson])
 
-  // 訂閱地點變化
-  useEffect(() => {
-    const unsubscribe = subscribeToLocations((newLocations) => {
-      setLocations(newLocations)
-    })
-    return () => {
-      if (unsubscribe) unsubscribe()
+  const loadData = async () => {
+    try {
+      const entries = await getEntries()
+      
+      // 提取唯一的搭乘者
+      const uniquePeople = [...new Set(entries.map(e => e.person))].filter(p => p)
+      setPeople(uniquePeople)
+      
+      // 提取唯一的地點（排除「未知」）
+      const uniqueLocations = [...new Set(entries.map(e => e.location))].filter(l => l && l !== '未知')
+      setLocations(uniqueLocations)
+      
+      // 如果還沒選擇搭乘者，選擇第一個
+      if (!selectedPerson && uniquePeople.length > 0) {
+        setSelectedPerson(uniquePeople[0])
+      }
+    } catch (err) {
+      console.error('Failed to load data:', err)
     }
-  }, [])
+  }
 
   const handleAddPerson = async () => {
     if (!newPersonName.trim()) {
@@ -74,8 +64,8 @@ export default function AddEntryPage({ onNavigate }) {
     }
 
     try {
-      // 添加一個虛擬紀錄來保存搭乘者（這樣搭乘者會同步到其他設備）
-      await addEntryForUser('shared', {
+      // 添加一個虛擬紀錄來保存搭乘者
+      await addEntry({
         date: new Date().toISOString().split('T')[0],
         person: trimmed,
         location: selectedLocation || '未知',
@@ -87,6 +77,9 @@ export default function AddEntryPage({ onNavigate }) {
       setNewPersonName('')
       setShowAddPerson(false)
       setError('')
+      
+      // 重新加載數據
+      await loadData()
     } catch (error) {
       setError('添加搭乘者失敗：' + error.message)
     }
@@ -105,10 +98,10 @@ export default function AddEntryPage({ onNavigate }) {
     }
 
     try {
-      // 添加一個虛擬紀錄來保存地點（這樣地點會同步到其他設備）
-      await addEntryForUser('shared', {
+      // 添加一個虛擬紀錄來保存地點
+      await addEntry({
         date: new Date().toISOString().split('T')[0],
-        person: selectedPerson || '阿龍',
+        person: selectedPerson || '阿物',
         location: trimmed,
         amount: 0,
         notes: '[自動建立]',
@@ -118,6 +111,9 @@ export default function AddEntryPage({ onNavigate }) {
       setNewLocationName('')
       setShowAddLocation(false)
       setError('')
+      
+      // 重新加載數據
+      await loadData()
     } catch (error) {
       setError('添加地點失敗：' + error.message)
     }
@@ -143,7 +139,7 @@ export default function AddEntryPage({ onNavigate }) {
       setLoading(true)
       setError('')
 
-      await addEntryForUser('shared', {
+      await addEntry({
         date,
         person: selectedPerson,
         location: selectedLocation,
@@ -159,6 +155,9 @@ export default function AddEntryPage({ onNavigate }) {
 
       // 顯示成功提示
       alert('紀錄已保存')
+      
+      // 重新加載數據
+      await loadData()
     } catch (error) {
       setError('保存失敗：' + error.message)
     } finally {
@@ -499,8 +498,9 @@ const styles = {
   },
   cancelButton: {
     width: '100%',
-    padding: '12px',
-    fontSize: '14px',
+    padding: '14px',
+    fontSize: '16px',
+    fontWeight: '600',
     backgroundColor: '#f0f0f0',
     color: '#333',
     border: 'none',
