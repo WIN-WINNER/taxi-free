@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: taxi-free-api
+    name: taxi-free
     env: node
     plan: free
     buildCommand: npm install
