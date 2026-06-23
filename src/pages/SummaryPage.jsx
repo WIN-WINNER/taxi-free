@@ -239,6 +239,7 @@ const styles = {
   tableTitle: {
     fontSize: '18px',
     fontWeight: 'bold',
+    color: '#333',
   },
   table: {
     width: '100%',
