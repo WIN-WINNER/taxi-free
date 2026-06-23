@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
-import { getEntries } from '../supabase'
+import { getEntries, deleteEntry } from '../supabase'
 
 export default function RecordsPage({ onNavigate }) {
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [swipedId, setSwipedId] = useState(null)
+  const [touchStart, setTouchStart] = useState(0)
 
   useEffect(() => {
     loadRecords()
@@ -23,6 +25,34 @@ export default function RecordsPage({ onNavigate }) {
       console.error('Failed to load records:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = (e, recordId) => {
+    const touchEnd = e.changedTouches[0].clientX
+    if (touchStart - touchEnd > 50) {
+      // 左滑
+      setSwipedId(recordId)
+    } else if (touchEnd - touchStart > 50) {
+      // 右滑
+      setSwipedId(null)
+    }
+  }
+
+  const handleDelete = async (recordId) => {
+    if (confirm('確定要刪除這筆紀錄嗎？')) {
+      try {
+        await deleteEntry(recordId)
+        setSwipedId(null)
+        loadRecords()
+      } catch (err) {
+        console.error('Failed to delete record:', err)
+        alert('刪除失敗')
+      }
     }
   }
 
@@ -79,18 +109,33 @@ export default function RecordsPage({ onNavigate }) {
         {filteredRecords.length === 0 ? (
           <div style={styles.emptyText}>暫無紀錄</div>
         ) : (
-          filteredRecords.map((record, index) => (
-            <div key={index} style={styles.recordItem}>
-              <div style={styles.recordHeader}>
-                <div style={styles.recordPerson}>{record.person}</div>
-                <div style={styles.recordAmount}>NT$ {record.amount.toFixed(2)}</div>
+          filteredRecords.map((record) => (
+            <div
+              key={record.id}
+              style={styles.recordItemWrapper}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={(e) => handleTouchEnd(e, record.id)}
+            >
+              <div style={styles.recordItem}>
+                <div style={styles.recordHeader}>
+                  <div style={styles.recordPerson}>{record.person}</div>
+                  <div style={styles.recordAmount}>NT$ {record.amount.toFixed(2)}</div>
+                </div>
+                <div style={styles.recordDetails}>
+                  <span style={styles.recordLocation}>{record.location}</span>
+                  <span style={styles.recordDate}>{record.date}</span>
+                </div>
+                {record.notes && (
+                  <div style={styles.recordNotes}>{record.notes}</div>
+                )}
               </div>
-              <div style={styles.recordDetails}>
-                <span style={styles.recordLocation}>{record.location}</span>
-                <span style={styles.recordDate}>{record.date}</span>
-              </div>
-              {record.notes && (
-                <div style={styles.recordNotes}>{record.notes}</div>
+              {swipedId === record.id && (
+                <button
+                  style={styles.deleteButton}
+                  onClick={() => handleDelete(record.id)}
+                >
+                  刪除
+                </button>
               )}
             </div>
           ))
@@ -144,11 +189,19 @@ const styles = {
     gap: '12px',
     marginBottom: '20px',
   },
+  recordItemWrapper: {
+    display: 'flex',
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: '8px',
+  },
   recordItem: {
     backgroundColor: '#f5f5f5',
     borderRadius: '8px',
     padding: '16px',
     border: '1px solid #ddd',
+    flex: 1,
+    minWidth: 0,
   },
   recordHeader: {
     display: 'flex',
@@ -200,5 +253,15 @@ const styles = {
     border: 'none',
     borderRadius: '8px',
     cursor: 'pointer',
+  },
+  deleteButton: {
+    backgroundColor: '#ff4444',
+    color: 'white',
+    border: 'none',
+    padding: '16px 20px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    fontSize: '14px',
   },
 }

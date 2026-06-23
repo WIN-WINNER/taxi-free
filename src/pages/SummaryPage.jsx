@@ -210,7 +210,10 @@ const styles = {
     borderColor: '#0a7ea4',
   },
   personButtonDisabled: {
-    opacity: 0.5,
+    backgroundColor: '#999',
+    color: '#fff',
+    borderColor: '#999',
+    opacity: 0.6,
     cursor: 'not-allowed',
   },
   personButtonName: {
@@ -252,6 +255,7 @@ const styles = {
     fontWeight: '600',
     fontSize: '14px',
     border: '1px solid #ddd',
+    color: '#333',
   },
   tableRow: {
     borderBottom: '1px solid #ddd',
@@ -261,6 +265,8 @@ const styles = {
     textAlign: 'center',
     fontSize: '14px',
     border: '1px solid #ddd',
+    color: '#333',
+    fontWeight: '500',
   },
   tableFooter: {
     display: 'flex',
